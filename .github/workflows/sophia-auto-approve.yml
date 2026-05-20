@@ -1,0 +1,49 @@
+name: Sophia Auto-Approve (conservative RTC award)
+
+# The SAFE auto-award path. On a merged PR this auto-approves ONLY the
+# conservative Low tier (small, non-sensitive, non-bot PRs) and dispatches
+# it as a *pending* transfer with a 24-hour void window. Larger or
+# consensus/money/workflow-touching PRs are deliberately left for a human
+# `Payment: N RTC` directive (handled by auto-pay.yml).
+#
+# Two-stage safety: (1) Sophia auto-approves only the low-risk tier;
+# (2) the 24h pending-ledger void window lets the maintainer reverse
+# anything wrong before it confirms.
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+  issues: read
+  contents: read
+
+jobs:
+  auto-approve:
+    # Only when the PR actually merged, never on plain close.
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Sophia conservative auto-approve
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          RTC_VPS_HOST: ${{ secrets.RTC_VPS_HOST }}
+          RTC_ADMIN_KEY: ${{ secrets.RTC_ADMIN_KEY }}
+        run: python scripts/sophia_auto_approve.py
