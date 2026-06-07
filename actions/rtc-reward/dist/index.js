@@ -189,10 +189,20 @@ async function findWalletInRepo(token, apiBase, owner, repo, ref, pattern) {
 }
 
 async function sendRTC(nodeUrl, from, to, amount, adminKey, memo) {
-  const payload = { from, to, amount, admin_key: adminKey, memo };
-  const resp = await fetch(`${nodeUrl.replace(/\/$/, '')}/api/v1/transfer`, {
+  // RustChain node contract: POST /wallet/transfer with {from_miner,to_miner,
+  // amount_rtc}, admin auth via the X-Admin-Key header (NOT the body). The old
+  // /api/v1/transfer path 404s and body admin_key is ignored, so every reward
+  // silently failed. idempotency_key (the PR URL) prevents double-pay on re-run.
+  const payload = {
+    from_miner: from,
+    to_miner: to,
+    amount_rtc: amount,
+    memo,
+    idempotency_key: memo,
+  };
+  const resp = await fetch(`${nodeUrl.replace(/\/$/, '')}/wallet/transfer`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
     body: JSON.stringify(payload),
   });
   if (!resp.ok) {
