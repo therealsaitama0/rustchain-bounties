@@ -92,7 +92,7 @@ class RustChainTool(BaseTool):
             if response.status_code == 200:
                 return response.json()
             else:
-                return [{"error": f"Failed to fetch bounties: HTTP {response.status_code}"]
+                return [{"error": f"Failed to fetch bounties: HTTP {response.status_code}"}]
         except Exception as e:
             return [{"error": f"Failed to fetch bounties: {str(e)}"}]
     
